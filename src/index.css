@@ -6410,9 +6410,9 @@ button {
 }
 
 html {
-  --glass-surface: rgb(255 255 255 / 76%);
-  --glass-surface-strong: rgb(255 255 255 / 88%);
-  --glass-surface-soft: rgb(255 255 255 / 70%);
+  --glass-surface: rgb(255 255 255 / 92%);
+  --glass-surface-strong: rgb(255 255 255 / 97%);
+  --glass-surface-soft: rgb(255 255 255 / 88%);
   --glass-border: rgb(255 255 255 / 76%);
   --glass-highlight: rgb(255 255 255 / 92%);
   --glass-shadow: 0 20px 54px rgb(29 63 42 / 14%);
@@ -6431,9 +6431,9 @@ body {
 }
 
 html[data-theme="dark"] {
-  --glass-surface: rgb(19 32 24 / 86%);
-  --glass-surface-strong: rgb(19 32 24 / 93%);
-  --glass-surface-soft: rgb(19 32 24 / 78%);
+  --glass-surface: rgb(19 32 24 / 95%);
+  --glass-surface-strong: rgb(19 32 24 / 99%);
+  --glass-surface-soft: rgb(19 32 24 / 91%);
   --glass-border: rgb(211 239 218 / 24%);
   --glass-highlight: rgb(230 255 236 / 28%);
   --glass-shadow: 0 22px 58px rgb(0 0 0 / 32%);
@@ -6597,16 +6597,21 @@ html[data-theme="dark"] .subscription-shell {
   z-index: 60;
   inset: 0;
   overflow-y: auto;
-  background: rgb(7 18 12 / 30%);
-  backdrop-filter: blur(12px) saturate(125%);
-  -webkit-backdrop-filter: blur(12px) saturate(125%);
+  background: #f4f8f5;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .legal-overlay .legal-page {
   min-height: 100vh;
-  background: var(--glass-surface);
-  backdrop-filter: blur(26px) saturate(145%);
-  -webkit-backdrop-filter: blur(26px) saturate(145%);
+  background: #f4f8f5;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-theme="dark"] .legal-overlay,
+html[data-theme="dark"] .legal-overlay .legal-page {
+  background: #101a13;
 }
 
 .legal-overlay .legal-page-content {
@@ -8828,22 +8833,23 @@ html[data-theme="dark"] .landing-feature-modal .modal-heading > .icon-button {
       transition: none;
     }
   }
+}
 
-  .topbar,
-  .landing-header {
-    background-color: rgb(248 252 249 / 88%);
-    backdrop-filter: blur(24px) saturate(155%);
-    -webkit-backdrop-filter: blur(24px) saturate(155%);
-  }
+.topbar,
+.landing-header {
+  background-color: rgb(248 252 249 / 88%);
+  backdrop-filter: blur(24px) saturate(155%);
+  -webkit-backdrop-filter: blur(24px) saturate(155%);
+}
 
-  html[data-theme="dark"] .topbar,
-  html[data-theme="dark"] .landing-header {
-    background-color: rgb(18 31 23 / 94%);
-    backdrop-filter: blur(36px) saturate(165%);
-    -webkit-backdrop-filter: blur(36px) saturate(165%);
-  }
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .landing-header {
+  background-color: rgb(18 31 23 / 94%);
+  backdrop-filter: blur(36px) saturate(165%);
+  -webkit-backdrop-filter: blur(36px) saturate(165%);
+}
 
-  html:not([data-theme="dark"]) :is(
+html:not([data-theme="dark"]) :is(
     .button-secondary,
     .button-tertiary,
     .back-link,
@@ -8852,98 +8858,98 @@ html[data-theme="dark"] .landing-feature-modal .modal-heading > .icon-button {
     .landing-hero-login,
     .landing-legal-button,
     .legal-back-button
-  ) {
-    border: 1px solid rgb(92 105 97 / 38%) !important;
-  }
+ ) {
+  border: 1px solid rgb(92 105 97 / 38%) !important;
+}
 
+:where(
+    .sidebar,
+    .topbar,
+    .panel,
+    .metric-card,
+    .company-card,
+    .staff-card,
+    .modal-card,
+    .subscription-card,
+    .access-card,
+    .feature-card,
+    .tool-card,
+    .role-card,
+    .control-card,
+    .contact-card,
+    .legal-page-content,
+    .landing-about-highlight,
+    .landing-faq-item,
+    .preview-window,
+    .search-box,
+    .catalog-item,
+    .feature-mini-box,
+    .segmented,
+    .field-label input,
+    .field-label select,
+    .field-label textarea,
+    .money-field,
+    .report-toolbar input,
+    .report-title input,
+    .attendance-date input,
+    .cart-inputs input,
+    .notification-popover
+ ) {
+  backdrop-filter: blur(36px) saturate(170%);
+  -webkit-backdrop-filter: blur(36px) saturate(170%);
+}
+
+.topbar,
+.landing-header,
+.mobile-tabbar {
+  background-color: rgb(250 252 250 / 94%);
+}
+
+html[data-theme="dark"] :where(
+    .sidebar,
+    .topbar,
+    .panel,
+    .metric-card,
+    .company-card,
+    .staff-card,
+    .modal-card,
+    .subscription-card,
+    .access-card,
+    .feature-card,
+    .tool-card,
+    .role-card,
+    .control-card,
+    .contact-card,
+    .legal-page-content,
+    .landing-about-highlight,
+    .landing-faq-item,
+    .preview-window,
+    .search-box,
+    .catalog-item,
+    .feature-mini-box,
+    .segmented,
+    .field-label input,
+    .field-label select,
+    .field-label textarea,
+    .money-field,
+    .report-toolbar input,
+    .report-title input,
+    .attendance-date input,
+    .cart-inputs input,
+    .notification-popover
+ ) {
+  backdrop-filter: blur(40px) saturate(170%);
+  -webkit-backdrop-filter: blur(40px) saturate(170%);
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .landing-header,
+html[data-theme="dark"] .mobile-tabbar {
+  background-color: rgb(18 31 23 / 96%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
   :where(
-    .sidebar,
-    .topbar,
-    .panel,
-    .metric-card,
-    .company-card,
-    .staff-card,
-    .modal-card,
-    .subscription-card,
-    .access-card,
-    .feature-card,
-    .tool-card,
-    .role-card,
-    .control-card,
-    .contact-card,
-    .legal-page-content,
-    .landing-about-highlight,
-    .landing-faq-item,
-    .preview-window,
-    .search-box,
-    .catalog-item,
-    .feature-mini-box,
-    .segmented,
-    .field-label input,
-    .field-label select,
-    .field-label textarea,
-    .money-field,
-    .report-toolbar input,
-    .report-title input,
-    .attendance-date input,
-    .cart-inputs input,
-    .notification-popover
-  ) {
-    backdrop-filter: blur(36px) saturate(170%);
-    -webkit-backdrop-filter: blur(36px) saturate(170%);
-  }
-
-  .topbar,
-  .landing-header,
-  .mobile-tabbar {
-    background-color: rgb(250 252 250 / 94%);
-  }
-
-  html[data-theme="dark"] :where(
-    .sidebar,
-    .topbar,
-    .panel,
-    .metric-card,
-    .company-card,
-    .staff-card,
-    .modal-card,
-    .subscription-card,
-    .access-card,
-    .feature-card,
-    .tool-card,
-    .role-card,
-    .control-card,
-    .contact-card,
-    .legal-page-content,
-    .landing-about-highlight,
-    .landing-faq-item,
-    .preview-window,
-    .search-box,
-    .catalog-item,
-    .feature-mini-box,
-    .segmented,
-    .field-label input,
-    .field-label select,
-    .field-label textarea,
-    .money-field,
-    .report-toolbar input,
-    .report-title input,
-    .attendance-date input,
-    .cart-inputs input,
-    .notification-popover
-  ) {
-    backdrop-filter: blur(40px) saturate(170%);
-    -webkit-backdrop-filter: blur(40px) saturate(170%);
-  }
-
-  html[data-theme="dark"] .topbar,
-  html[data-theme="dark"] .landing-header,
-  html[data-theme="dark"] .mobile-tabbar {
-    background-color: rgb(18 31 23 / 96%);
-  }
-
-  @media (prefers-reduced-transparency: reduce) {
-    :where(
       .sidebar,
       .topbar,
       .panel,
@@ -8975,9 +8981,13 @@ html[data-theme="dark"] .landing-feature-modal .modal-heading > .icon-button {
       .attendance-date input,
       .cart-inputs input,
       .notification-popover
-    ) {
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-    }
+  ) {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
+}
+
+button:not(.landing-drawer-backdrop):not(.mobile-menu-backdrop),
+.button {
+  border: 1px solid rgb(112 123 116 / 46%) !important;
 }
