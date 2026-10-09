@@ -18,6 +18,7 @@ const allowedOrigin = process.env.APP_ORIGIN || 'http://localhost:5173'
 const serverDirectory = dirname(fileURLToPath(import.meta.url))
 
 app.disable('x-powered-by')
+app.set('trust proxy', 1)
 app.use(cors({ origin: allowedOrigin, credentials: true }))
 app.use(express.json({ limit: '1mb' }))
 app.use(session({

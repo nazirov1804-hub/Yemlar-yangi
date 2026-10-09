@@ -6410,9 +6410,9 @@ button {
 }
 
 html {
-  --glass-surface: rgb(255 255 255 / 42%);
-  --glass-surface-strong: rgb(255 255 255 / 54%);
-  --glass-surface-soft: rgb(255 255 255 / 26%);
+  --glass-surface: rgb(255 255 255 / 76%);
+  --glass-surface-strong: rgb(255 255 255 / 88%);
+  --glass-surface-soft: rgb(255 255 255 / 70%);
   --glass-border: rgb(255 255 255 / 76%);
   --glass-highlight: rgb(255 255 255 / 92%);
   --glass-shadow: 0 20px 54px rgb(29 63 42 / 14%);
@@ -6431,9 +6431,9 @@ body {
 }
 
 html[data-theme="dark"] {
-  --glass-surface: rgb(27 43 34 / 42%);
-  --glass-surface-strong: rgb(28 46 36 / 56%);
-  --glass-surface-soft: rgb(26 42 33 / 24%);
+  --glass-surface: rgb(19 32 24 / 86%);
+  --glass-surface-strong: rgb(19 32 24 / 93%);
+  --glass-surface-soft: rgb(19 32 24 / 78%);
   --glass-border: rgb(211 239 218 / 24%);
   --glass-highlight: rgb(230 255 236 / 28%);
   --glass-shadow: 0 22px 58px rgb(0 0 0 / 32%);
@@ -6798,10 +6798,17 @@ html:not([data-theme="dark"]) .preview-online {
 [data-sonner-toaster] [data-sonner-toast] {
   border: 1px solid var(--glass-border) !important;
   border-radius: 14px !important;
-  background: var(--glass-surface-strong) !important;
+  color: #26392e !important;
+  background: #f5faf6 !important;
   box-shadow: var(--glass-inset), var(--glass-shadow) !important;
-  backdrop-filter: blur(20px) saturate(145%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(145%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-theme="dark"] [data-sonner-toaster] [data-sonner-toast] {
+  border-color: rgb(206 240 215 / 26%) !important;
+  color: #e7f1ea !important;
+  background: #18251d !important;
 }
 
 html[data-theme="dark"] .landing-features {
@@ -7119,9 +7126,9 @@ html[data-theme="dark"] .legal-back-button:hover {
 }
 
 html[data-theme="dark"] {
-  --glass-surface: rgb(30 52 38 / 52%);
-  --glass-surface-strong: rgb(31 55 40 / 66%);
-  --glass-surface-soft: rgb(33 58 42 / 34%);
+  --glass-surface: rgb(19 32 24 / 86%);
+  --glass-surface-strong: rgb(19 32 24 / 93%);
+  --glass-surface-soft: rgb(19 32 24 / 78%);
   --glass-border: rgb(206 240 215 / 30%);
   --glass-highlight: rgb(226 255 234 / 42%);
   --glass-shadow: 0 22px 58px rgb(0 0 0 / 34%);
@@ -8819,6 +8826,158 @@ html[data-theme="dark"] .landing-feature-modal .modal-heading > .icon-button {
     .mobile-tabbar-item svg,
     .mobile-dock-indicator {
       transition: none;
+    }
+  }
+
+  .topbar,
+  .landing-header {
+    background-color: rgb(248 252 249 / 88%);
+    backdrop-filter: blur(24px) saturate(155%);
+    -webkit-backdrop-filter: blur(24px) saturate(155%);
+  }
+
+  html[data-theme="dark"] .topbar,
+  html[data-theme="dark"] .landing-header {
+    background-color: rgb(18 31 23 / 94%);
+    backdrop-filter: blur(36px) saturate(165%);
+    -webkit-backdrop-filter: blur(36px) saturate(165%);
+  }
+
+  html:not([data-theme="dark"]) :is(
+    .button-secondary,
+    .button-tertiary,
+    .back-link,
+    .password-visibility,
+    .role-switch button.selected,
+    .landing-hero-login,
+    .landing-legal-button,
+    .legal-back-button
+  ) {
+    border: 1px solid rgb(92 105 97 / 38%) !important;
+  }
+
+  :where(
+    .sidebar,
+    .topbar,
+    .panel,
+    .metric-card,
+    .company-card,
+    .staff-card,
+    .modal-card,
+    .subscription-card,
+    .access-card,
+    .feature-card,
+    .tool-card,
+    .role-card,
+    .control-card,
+    .contact-card,
+    .legal-page-content,
+    .landing-about-highlight,
+    .landing-faq-item,
+    .preview-window,
+    .search-box,
+    .catalog-item,
+    .feature-mini-box,
+    .segmented,
+    .field-label input,
+    .field-label select,
+    .field-label textarea,
+    .money-field,
+    .report-toolbar input,
+    .report-title input,
+    .attendance-date input,
+    .cart-inputs input,
+    .notification-popover
+  ) {
+    backdrop-filter: blur(36px) saturate(170%);
+    -webkit-backdrop-filter: blur(36px) saturate(170%);
+  }
+
+  .topbar,
+  .landing-header,
+  .mobile-tabbar {
+    background-color: rgb(250 252 250 / 94%);
+  }
+
+  html[data-theme="dark"] :where(
+    .sidebar,
+    .topbar,
+    .panel,
+    .metric-card,
+    .company-card,
+    .staff-card,
+    .modal-card,
+    .subscription-card,
+    .access-card,
+    .feature-card,
+    .tool-card,
+    .role-card,
+    .control-card,
+    .contact-card,
+    .legal-page-content,
+    .landing-about-highlight,
+    .landing-faq-item,
+    .preview-window,
+    .search-box,
+    .catalog-item,
+    .feature-mini-box,
+    .segmented,
+    .field-label input,
+    .field-label select,
+    .field-label textarea,
+    .money-field,
+    .report-toolbar input,
+    .report-title input,
+    .attendance-date input,
+    .cart-inputs input,
+    .notification-popover
+  ) {
+    backdrop-filter: blur(40px) saturate(170%);
+    -webkit-backdrop-filter: blur(40px) saturate(170%);
+  }
+
+  html[data-theme="dark"] .topbar,
+  html[data-theme="dark"] .landing-header,
+  html[data-theme="dark"] .mobile-tabbar {
+    background-color: rgb(18 31 23 / 96%);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    :where(
+      .sidebar,
+      .topbar,
+      .panel,
+      .metric-card,
+      .company-card,
+      .staff-card,
+      .modal-card,
+      .subscription-card,
+      .access-card,
+      .feature-card,
+      .tool-card,
+      .role-card,
+      .control-card,
+      .contact-card,
+      .legal-page-content,
+      .landing-about-highlight,
+      .landing-faq-item,
+      .preview-window,
+      .search-box,
+      .catalog-item,
+      .feature-mini-box,
+      .segmented,
+      .field-label input,
+      .field-label select,
+      .field-label textarea,
+      .money-field,
+      .report-toolbar input,
+      .report-title input,
+      .attendance-date input,
+      .cart-inputs input,
+      .notification-popover
+    ) {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
   }
 }

@@ -328,6 +328,7 @@ function App() {
     setData(storeData);
     setBootError("");
     setLoading(false);
+    return result;
   }, [emptyStoreData]);
 
   useEffect(() => {
@@ -1839,12 +1840,15 @@ function AccessPage({
         method: "POST",
         body: setupRequired ? form : { ...form, role: loginRole },
       });
+      const result = await onSuccess();
+      if (!result?.user) {
+        throw new Error("Kirish sessiyasi saqlanmadi. Qayta urinib ko‘ring.");
+      }
       toast.success(
         setupRequired
           ? "Platforma akkaunti yaratildi"
           : "Tizimga muvaffaqiyatli kirdingiz",
       );
-      await onSuccess();
     } catch (error) {
       toast.error(error.message);
     } finally {
