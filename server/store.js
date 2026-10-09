@@ -50,11 +50,23 @@ export async function initializeDatabase() {
       changed = true
     }
     if (!parsed.platformSettings || typeof parsed.platformSettings !== 'object') {
-      parsed.platformSettings = { phone: '' }
+      parsed.platformSettings = { phone: '', telegram: 'naziroff1' }
       changed = true
-    } else if (typeof parsed.platformSettings.phone !== 'string') {
-      parsed.platformSettings.phone = ''
-      changed = true
+    } else {
+      if (typeof parsed.platformSettings.phone !== 'string') {
+        parsed.platformSettings.phone = ''
+        changed = true
+      }
+      if (typeof parsed.platformSettings.telegram !== 'string') {
+        parsed.platformSettings.telegram = 'naziroff1'
+        changed = true
+      }
+    }
+    for (const company of parsed.companies) {
+      if (!Number.isSafeInteger(company.absentDeduction)) {
+        company.absentDeduction = 0
+        changed = true
+      }
     }
     for (const company of parsed.companies) {
       if (!Number.isSafeInteger(company.monthlyFee)) {
@@ -77,7 +89,7 @@ export async function initializeDatabase() {
       subscriptionRates: [],
       attendance: [],
       demoRegistrations: [],
-      platformSettings: { phone: '' },
+      platformSettings: { phone: '', telegram: 'naziroff1' },
     }
     await persist(database)
   }

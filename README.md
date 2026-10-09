@@ -10,6 +10,8 @@ Yem mahsulotlari do‘koni uchun savdo, umumiy ombor, cheklar, hodimlar va oylik
 4. Terminal ko‘rsatgan Vite manzilini oching. Birinchi kirishda platforma egasining login va parolini o‘zingiz yarating.
 5. Platforma panelidan do‘kon yarating. Boshliq login-parolini do‘kon egasiga bering; boshliq o‘z panelidan har bir hodim uchun alohida login ochadi.
 
+Demo uchun tasdiqlash kodi emailga yuborilishi uchun `.env.example` faylidan `.env` yarating va `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` qiymatlarini email xizmat ko‘rsatuvchingiz ma’lumotlari bilan to‘ldiring. SMTP sozlanmagan yoki jo‘natishda xato bo‘lsa, tasdiqlash kodi ko‘rsatilmaydi va server xatolik qaytaradi. Kod email manzili uchun 10 daqiqa amal qiladi.
+
 ## Imkoniyatlar
 
 - Har bir do‘konning tovari, savdosi, hodimi, cheki va kirimlari `companyId` bilan alohida ajratiladi. Platforma egasi do‘kon yaratadi; boshliq va hodimlar faqat o‘z do‘konida ishlaydi.

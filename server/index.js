@@ -3,7 +3,11 @@ import bcrypt from 'bcryptjs'
 import cors from 'cors'
 import { randomBytes, randomUUID } from 'node:crypto'
 import express from 'express'
+import { readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import rateLimit from 'express-rate-limit'
+import nodemailer from 'nodemailer'
 import session from 'express-session'
 import { initializeDatabase, readDatabase, updateDatabase } from './store.js'
 
@@ -11,6 +15,7 @@ const app = express()
 const port = Number(process.env.PORT) || 4000
 const sessionSecret = process.env.SESSION_SECRET || randomBytes(48).toString('hex')
 const allowedOrigin = process.env.APP_ORIGIN || 'http://localhost:5173'
+const serverDirectory = dirname(fileURLToPath(import.meta.url))
 
 app.disable('x-powered-by')
 app.use(cors({ origin: allowedOrigin, credentials: true }))
@@ -35,6 +40,7 @@ const registrationLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Ro‘yxatdan o‘tish urinishlari ko‘payib ketdi. Birozdan keyin qayta urinib ko‘ring.' },
 })
+const pendingDemoVerifications = new Map()
 
 function fail(statusCode, message) {
   throw Object.assign(new Error(message), { statusCode })
@@ -77,6 +83,25 @@ function validateDate(value) {
   const date = new Date(`${value}T00:00:00.000Z`)
   if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) fail(400, 'Sanani tekshiring.')
   return value
+}
+
+function currentTashkentDate() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tashkent',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const part = (type) => parts.find((item) => item.type === type)?.value
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function validateRestDay(value) {
+  const day = Number(value)
+  if (!Number.isInteger(day) || day < 0 || day > 6) {
+    fail(400, 'Haftalik dam olish kunini tanlang.')
+  }
+  return day
 }
 
 function positiveAmount(value, label = 'Summa') {
@@ -167,6 +192,85 @@ function validatePhone(value) {
   return phone
 }
 
+function validateTelegram(value) {
+  const username = typeof value === 'string' ? value.trim() : ''
+  if (!username) return 'naziroff1'
+  const normalized = username.startsWith('@') ? username.slice(1) : username
+  if (!/^[A-Za-z0-9_]{3,32}$/.test(normalized)) fail(400, 'Telegram username noto‘g‘ri. @ dan tashqari 3–32 ta lotin harf, raqam yoki pastki chiziq ishlating.')
+  return normalized
+}
+
+function generateDemoCode() {
+  return String((randomBytes(4).readUInt32BE(0) % 900000) + 100000)
+}
+
+async function sendVerificationEmail(email, code) {
+  const host = process.env.SMTP_HOST
+  const port = Number(process.env.SMTP_PORT || 587)
+  const user = process.env.SMTP_USER
+  const pass = process.env.SMTP_PASS
+  if (!host || !user || !pass) fail(503, 'Email yuborish xizmati sozlanmagan. Administrator SMTP sozlamalarini to‘ldirishi kerak.')
+  try {
+    const logo = await readFile(resolve(serverDirectory, '../public/yemzor-logo.png'))
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    })
+    const info = await transporter.sendMail({
+      from: process.env.SMTP_FROM || user,
+      to: email,
+      subject: `${code} — Yemzor tasdiqlash kodi`,
+      text: `Yemzor demo akkauntingiz uchun tasdiqlash kodi (verification code):\n\n${code}\n\nKod 10 daqiqa amal qiladi va bir marta ishlatiladi. Agar siz demo ro‘yxatdan o‘tishni boshlamagan bo‘lsangiz, bu xatni e’tiborsiz qoldiring.\n\nYemzor jamoasi`,
+      html: `<!doctype html>
+<html lang="uz">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Yemzor tasdiqlash kodi</title></head>
+  <body style="margin:0;padding:32px 12px;background:#f3f6f4;font-family:Arial,Helvetica,sans-serif;color:#26372c;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e4ebe5;border-radius:18px;overflow:hidden;">
+      <tr><td style="padding:25px 30px;background:#174b30;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
+          <td style="padding-right:11px;vertical-align:middle;"><img src="cid:yemzor-logo" width="44" height="44" alt="Yemzor logosi" style="display:block;width:44px;height:44px;border-radius:50%;background:#fff;"></td>
+          <td style="vertical-align:middle;color:#fff;"><strong style="display:block;font-size:19px;line-height:1.3;">Yemzor</strong><span style="display:block;margin-top:3px;color:#c5ddcd;font-size:10px;font-weight:bold;letter-spacing:1px;">SAVDO VA OMBOR BOSHQARUVI</span></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:32px 30px 12px;">
+        <p style="margin:0 0 9px;color:#46815a;font-size:11px;font-weight:bold;letter-spacing:1.2px;">EMAILNI TASDIQLASH</p>
+        <h1 style="margin:0;color:#24382b;font-size:25px;line-height:1.3;">Demo akkauntingizni tasdiqlang</h1>
+        <p style="margin:12px 0 0;color:#68776d;font-size:14px;line-height:1.65;">Yemzor demo akkauntini ochishni so‘radingiz. Email manzilingizni tasdiqlash uchun quyidagi kodni kiriting:</p>
+      </td></tr>
+      <tr><td style="padding:20px 30px 22px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f1f5fb;border-radius:12px;">
+          <tr><td style="padding:18px 16px 9px;color:#536578;font-size:12px;">Tasdiqlash kodi</td></tr>
+          <tr><td style="padding:0 16px 17px;">
+            <table role="presentation" cellspacing="5" cellpadding="0" border="0"><tr>${[...code].map((digit) => `<td align="center" width="34" height="44" style="width:34px;height:44px;border:1px solid #e0e7ed;border-radius:6px;background:#fff;color:#203447;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;">${digit}</td>`).join('')}</tr></table>
+            <p style="margin:10px 0 0;color:#203447;font-family:Consolas,Monaco,monospace;font-size:20px;font-weight:bold;letter-spacing:5px;">${code}</p>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:0 30px 30px;">
+        <p style="margin:0;color:#68776d;font-size:13px;line-height:1.65;"><strong>Kod 10 daqiqa amal qiladi.</strong> Uni hech kimga bermang — Yemzor xodimlari sizdan tasdiqlash kodini so‘ramaydi.</p>
+        <p style="margin:18px 0 0;color:#87938a;font-size:12px;line-height:1.6;">Agar siz demo akkaunt ochishni so‘ramagan bo‘lsangiz, ushbu xatni e’tiborsiz qoldiring.</p>
+      </td></tr>
+      <tr><td style="padding:17px 30px;border-top:1px solid #e9eeea;color:#87938a;font-size:11px;">© Yemzor · Do‘kon savdosi va ombor boshqaruvi</td></tr>
+    </table>
+  </body>
+</html>`,
+      attachments: [{ filename: 'yemzor-logo.png', content: logo, contentType: 'image/png', cid: 'yemzor-logo' }],
+    })
+    const accepted = info.accepted.some((address) => String(address).toLocaleLowerCase('en-US') === email)
+    if (!accepted) {
+      console.error(`[Yemzor email] SMTP recipient not accepted. responseCode=${info.responseCode || 'unknown'}`)
+      fail(502, 'Email server bu manzilni qabul qilmadi. Emailni tekshirib, qayta urinib ko‘ring.')
+    }
+    return true
+  } catch (error) {
+    if (error.statusCode) throw error
+    console.error(`[Yemzor email] Verification mail failed. code=${error.code || 'unknown'} responseCode=${error.responseCode || 'none'} command=${error.command || 'unknown'}`)
+    fail(502, 'Tasdiqlash kodini emailga yuborib bo‘lmadi. Email manzilini tekshirib, qayta urinib ko‘ring.')
+  }
+}
+
 function findUniqueLogin(database, login) {
   return database.users.some((user) => user.login === login)
 }
@@ -189,7 +293,7 @@ function requirePlatformAdmin(request, _response, next) {
 }
 
 function requireCompanyUser(request, _response, next) {
-  if (!['company_owner', 'employee'].includes(request.user?.role)) {
+  if (!['company_owner', 'manager', 'employee'].includes(request.user?.role)) {
     return next(Object.assign(new Error('Bu amal do‘kon akkaunti uchun.'), { statusCode: 403 }))
   }
   next()
@@ -202,6 +306,20 @@ function requireCompanyOwner(request, _response, next) {
   next()
 }
 
+function requireOwnerOrManager(request, _response, next) {
+  if (!['company_owner', 'manager'].includes(request.user?.role)) {
+    return next(Object.assign(new Error('Bu amal faqat boshliq yoki menejerga ruxsat etilgan.'), { statusCode: 403 }))
+  }
+  next()
+}
+
+function requireOwnerOrPlatformAdmin(request, _response, next) {
+  if (!['company_owner', 'platform_admin'].includes(request.user?.role)) {
+    return next(Object.assign(new Error('Bu amal faqat boshliq yoki platforma egasiga ruxsat etilgan.'), { statusCode: 403 }))
+  }
+  next()
+}
+
 function safeUser(user) {
   return {
     id: user.id,
@@ -210,6 +328,8 @@ function safeUser(user) {
     role: user.role,
     companyId: user.companyId,
     monthlySalary: user.monthlySalary || 0,
+    restDay: Number.isInteger(user.restDay) ? user.restDay : null,
+    startDate: user.startDate || user.createdAt?.slice(0, 10) || null,
   }
 }
 
@@ -230,7 +350,7 @@ function ensureUniqueLogin(database, login) {
 app.get('/api/status', (request, response) => {
   const database = readDatabase()
   const user = currentUser(request)
-  const company = user && ['company_owner', 'employee'].includes(user.role)
+  const company = user && ['company_owner', 'manager', 'employee'].includes(user.role)
     ? database.companies.find((item) => item.id === user.companyId)
     : null
   response.json({
@@ -242,8 +362,8 @@ app.get('/api/status', (request, response) => {
 })
 
 app.get('/api/public/settings', (_request, response) => {
-  const { phone } = readDatabase().platformSettings
-  response.json({ phone, telegram: 'naziroff1' })
+  const { phone, telegram } = readDatabase().platformSettings
+  response.json({ phone, telegram: telegram || 'naziroff1' })
 })
 
 app.get('/api/public/landing', (_request, response) => {
@@ -301,6 +421,7 @@ app.post('/api/auth/login', async (request, response) => {
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) fail(401, 'Login yoki parol noto‘g‘ri.')
   const requestedRole = request.body?.role
   if ((requestedRole === 'employee' && user.role !== 'employee')
+    || (requestedRole === 'manager' && user.role !== 'manager')
     || (requestedRole === 'company_owner' && !['company_owner', 'platform_admin'].includes(user.role))) {
     fail(401, 'Tanlangan kirish turi uchun login yoki parol mos emas.')
   }
@@ -309,7 +430,7 @@ app.post('/api/auth/login', async (request, response) => {
   response.json({ user: safeUser(user) })
 })
 
-app.patch('/api/account/credentials', requireAuth, requireCompanyOwner, async (request, response) => {
+app.patch('/api/account/credentials', requireAuth, requireOwnerOrPlatformAdmin, async (request, response) => {
   const currentPassword = request.body?.currentPassword
   if (typeof currentPassword !== 'string' || !currentPassword) fail(400, 'Joriy parolni kiriting.')
   const requestedLogin = typeof request.body?.login === 'string' ? request.body.login.trim() : ''
@@ -334,9 +455,59 @@ app.patch('/api/account/credentials', requireAuth, requireCompanyOwner, async (r
   response.json({ user })
 })
 
+app.post('/api/company/reset', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+  const currentPassword = request.body?.currentPassword
+  if (typeof currentPassword !== 'string' || !currentPassword) fail(400, 'Amalni tasdiqlash uchun joriy parolni kiriting.')
+  if (request.body?.confirmation !== '0 ga tushurish') fail(400, 'Tasdiqlash uchun “0 ga tushurish” iborasini aynan kiriting.')
+  const result = await updateDatabase(async (database) => {
+    const account = database.users.find((entry) => entry.id === request.user.id && entry.active)
+    if (!account || !(await bcrypt.compare(currentPassword, account.passwordHash))) fail(401, 'Joriy parol noto‘g‘ri.')
+    const company = requireCompany(request, database)
+    const companyId = company.id
+    const cleared = {}
+    for (const collection of ['sales', 'receipts', 'movements', 'attendance']) {
+      const before = database[collection].length
+      database[collection] = database[collection].filter((entry) => entry.companyId !== companyId)
+      cleared[collection] = before - database[collection].length
+    }
+    for (const product of companyRecords(database, companyId, 'products')) product.quantity = 0
+    company.nextReceiptNumber = 0
+    return { cleared, productsReset: companyRecords(database, companyId, 'products').length }
+  })
+  response.json({ ...result, message: 'Hisob yozuvlari tozalandi, tovarlar qoldig‘i 0 ga tushirildi.' })
+})
+
+app.post('/api/demo/register/request', registrationLimiter, async (request, response) => {
+  const email = validateEmail(request.body?.email)
+  if (readDatabase().demoRegistrations.some((entry) => entry.email === email)) {
+    fail(409, 'Bu email bilan demo oldin ro‘yxatdan o‘tgan. Mavjud email va parol bilan kiring.')
+  }
+  if (readDatabase().users.some((entry) => entry.login === email || entry.email === email)) {
+    fail(409, 'Bu email allaqachon ishlatilgan.')
+  }
+  const code = generateDemoCode()
+  await sendVerificationEmail(email, code)
+  pendingDemoVerifications.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 })
+  response.json({ email, sent: true, message: `Tasdiqlash kodi ${email} manziliga yuborildi.` })
+})
+
 app.post('/api/demo/register', registrationLimiter, async (request, response) => {
   const name = validateName(request.body?.name, 'Ism-familiya')
   const email = validateEmail(request.body?.email)
+  const verificationCode = typeof request.body?.verificationCode === 'string' ? request.body.verificationCode.trim() : ''
+  const pendingVerification = pendingDemoVerifications.get(email)
+  if (!pendingVerification || pendingVerification.expiresAt <= Date.now()) {
+    pendingDemoVerifications.delete(email)
+    fail(400, 'Tasdiqlash kodi topilmadi yoki muddati tugadi. Yangi kod so‘rang.')
+  }
+  if (pendingVerification.attempts >= 5) {
+    pendingDemoVerifications.delete(email)
+    fail(429, 'Tasdiqlash kodini kiritish urinishlari tugadi. Yangi kod so‘rang.')
+  }
+  if (verificationCode !== pendingVerification.code) {
+    pendingVerification.attempts += 1
+    fail(400, 'Email tasdiqlash kodi noto‘g‘ri.')
+  }
   validatePassword(request.body?.password)
   const passwordHash = await bcrypt.hash(request.body.password, 12)
   const result = await updateDatabase((database) => {
@@ -368,6 +539,7 @@ app.post('/api/demo/register', registrationLimiter, async (request, response) =>
       ownerId: user.id,
       nextReceiptNumber: 0,
       isDemo: true,
+      absentDeduction: 0,
       demoExpiresAt,
       createdAt,
     }
@@ -376,6 +548,7 @@ app.post('/api/demo/register', registrationLimiter, async (request, response) =>
     database.demoRegistrations.push({ id: randomUUID(), email, createdAt, expiresAt: demoExpiresAt })
     return { user: safeUser(user), company: { id: company.id, name: company.name }, demoExpiresAt }
   })
+  pendingDemoVerifications.delete(email)
   await new Promise((resolve, reject) => request.session.regenerate((error) => error ? reject(error) : resolve()))
   request.session.userId = result.user.id
   response.status(201).json(result)
@@ -401,6 +574,7 @@ app.get('/api/platform/companies', requireAuth, requirePlatformAdmin, (_request,
       name: company.name,
       createdAt: company.createdAt,
       ownerLogin: owner?.login || '',
+      ownerPhone: owner?.phone || '',
       employeeCount: employees.length,
       latestSubscription,
       currentRate: database.subscriptionRates.find((item) => item.companyId === company.id && item.period === currentBillingPeriod()) || null,
@@ -413,6 +587,7 @@ app.get('/api/platform/companies', requireAuth, requirePlatformAdmin, (_request,
 app.post('/api/platform/companies', requireAuth, requirePlatformAdmin, async (request, response) => {
   const name = validateName(request.body?.name, 'Do‘kon nomi')
   const ownerName = validateName(request.body?.ownerName, 'Boshliq ismi')
+  const ownerPhone = validatePhone(request.body?.phone ?? '')
   const login = validateLogin(request.body?.login)
   validatePassword(request.body?.password)
   const monthlyFee = positiveAmount(request.body?.monthlyFee, 'Oylik obuna narxi')
@@ -422,11 +597,12 @@ app.post('/api/platform/companies', requireAuth, requirePlatformAdmin, async (re
   const result = await updateDatabase((database) => {
     ensureUniqueLogin(database, login)
     const now = new Date().toISOString()
-    const company = { id: randomUUID(), name, ownerId: randomUUID(), nextReceiptNumber: 0, createdAt: now }
+    const company = { id: randomUUID(), name, ownerId: randomUUID(), nextReceiptNumber: 0, absentDeduction: 0, createdAt: now }
     const owner = {
       id: company.ownerId,
       name: ownerName,
       login,
+      phone: ownerPhone,
       passwordHash,
       role: 'company_owner',
       companyId: company.id,
@@ -506,8 +682,10 @@ app.get('/api/platform/settings', requireAuth, requirePlatformAdmin, (_request, 
 
 app.patch('/api/platform/settings', requireAuth, requirePlatformAdmin, async (request, response) => {
   const phone = validatePhone(request.body?.phone)
+  const telegram = validateTelegram(request.body?.telegram)
   const settings = await updateDatabase((database) => {
     database.platformSettings.phone = phone
+    database.platformSettings.telegram = telegram
     return database.platformSettings
   })
   response.json(settings)
@@ -534,24 +712,46 @@ app.get('/api/store', requireAuth, requireCompanyUser, requirePaidSubscription, 
   const company = requireCompany(request, database)
   const users = companyRecords(database, company.id, 'users').filter((user) => user.active)
   const ownMovements = companyRecords(database, company.id, 'movements')
+  const isOwnerOrManager = ['company_owner', 'manager'].includes(request.user.role)
   response.json({
-    company: { id: company.id, name: company.name, isDemo: Boolean(company.isDemo), demoExpiresAt: company.demoExpiresAt || null },
+    company: {
+      id: company.id,
+      name: company.name,
+      createdAt: company.createdAt,
+      isDemo: Boolean(company.isDemo),
+      demoExpiresAt: company.demoExpiresAt || null,
+      absentDeduction: Number(company.absentDeduction || 0),
+    },
     products: companyRecords(database, company.id, 'products'),
     sales: companyRecords(database, company.id, 'sales').sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     receipts: companyRecords(database, company.id, 'receipts'),
-    movements: request.user.role === 'company_owner'
+    movements: isOwnerOrManager
       ? ownMovements
       : ownMovements.filter((item) => item.employeeId === request.user.id),
     attendance: companyRecords(database, company.id, 'attendance').filter(
-      (item) => request.user.role === 'company_owner' || item.employeeId === request.user.id,
+      (item) => isOwnerOrManager || item.employeeId === request.user.id,
     ),
-    employees: request.user.role === 'company_owner'
+    employees: isOwnerOrManager
       ? users.filter((user) => user.role === 'employee').map(safeUser)
       : users.filter((user) => user.id === request.user.id).map(safeUser),
+    managers: isOwnerOrManager
+      ? users.filter((user) => user.role === 'manager').map(safeUser)
+      : [],
   })
 })
 
-app.post('/api/products', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+app.patch('/api/company/settings', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+  const amount = Number(request.body?.absentDeduction)
+  if (!Number.isFinite(amount) || amount < 0) fail(400, 'Kelmagan kun uchun chegirma 0 yoki musbat son bo‘lishi kerak.')
+  const company = await updateDatabase((database) => {
+    const current = requireCompany(request, database)
+    current.absentDeduction = Math.round(amount)
+    return { id: current.id, name: current.name, absentDeduction: current.absentDeduction }
+  })
+  response.json({ company })
+})
+
+app.post('/api/products', requireAuth, requireOwnerOrManager, requirePaidSubscription, async (request, response) => {
   const name = validateName(request.body?.name, 'Tovar nomi')
   const unit = request.body?.unit
   if (!['bag', 'weight'].includes(unit)) fail(400, 'Tovar birligi qop yoki vazn bo‘lishi kerak.')
@@ -589,7 +789,7 @@ app.post('/api/products', requireAuth, requireCompanyOwner, requirePaidSubscript
   response.status(201).json({ product: result })
 })
 
-app.post('/api/products/:id/stock', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+app.post('/api/products/:id/stock', requireAuth, requireOwnerOrManager, requirePaidSubscription, async (request, response) => {
   const quantity = Number(request.body?.quantity)
   const unit = request.body?.unit
   if (!Number.isFinite(quantity) || quantity <= 0 || !['bag', 'kg', 'ton'].includes(unit)) fail(400, 'Kirim miqdori va birligini tekshiring.')
@@ -620,7 +820,7 @@ app.post('/api/products/:id/stock', requireAuth, requireCompanyOwner, requirePai
   response.json({ product: result })
 })
 
-app.patch('/api/products/:id', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+app.patch('/api/products/:id', requireAuth, requireOwnerOrManager, requirePaidSubscription, async (request, response) => {
   const { name, price, minimumPrice } = request.body || {}
   const result = await updateDatabase((database) => {
     const company = requireCompany(request, database)
@@ -687,6 +887,7 @@ app.post('/api/sales', requireAuth, requireCompanyUser, requirePaidSubscription,
       receiptNumber: String(++company.nextReceiptNumber).padStart(6, '0'),
       sellerId,
       sellerName: seller?.name || 'Hodim',
+      companyName: company.name,
       items: lines,
       total: lines.reduce((total, line) => total + line.lineTotal, 0),
       createdAt,
@@ -702,6 +903,9 @@ app.post('/api/employees', requireAuth, requireCompanyOwner, requirePaidSubscrip
   const login = validateLogin(request.body?.login)
   validatePassword(request.body?.password)
   const monthlySalary = positiveAmount(request.body?.monthlySalary, 'Oylik')
+  const restDay = validateRestDay(request.body?.restDay)
+  const startDate = validateDate(request.body?.startDate)
+  if (startDate > currentTashkentDate()) fail(400, 'Ish boshlash sanasi kelajakda bo‘lishi mumkin emas.')
   const passwordHash = await bcrypt.hash(request.body.password, 12)
   const employee = await updateDatabase((database) => {
     const company = requireCompany(request, database)
@@ -714,6 +918,8 @@ app.post('/api/employees', requireAuth, requireCompanyOwner, requirePaidSubscrip
       role: 'employee',
       companyId: company.id,
       monthlySalary,
+      restDay,
+      startDate,
       active: true,
       createdAt: new Date().toISOString(),
     }
@@ -726,11 +932,14 @@ app.post('/api/employees', requireAuth, requireCompanyOwner, requirePaidSubscrip
 app.patch('/api/employees/:id', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
   const name = validateName(request.body?.name, 'Hodim ismi')
   const monthlySalary = positiveAmount(request.body?.monthlySalary, 'Oylik')
+  const restDay = validateRestDay(request.body?.restDay)
+  const startDate = validateDate(request.body?.startDate)
+  if (startDate > currentTashkentDate()) fail(400, 'Ish boshlash sanasi kelajakda bo‘lishi mumkin emas.')
   const employee = await updateDatabase((database) => {
     const company = requireCompany(request, database)
     const user = companyRecords(database, company.id, 'users').find((item) => item.id === request.params.id && item.role === 'employee')
     if (!user) fail(404, 'Hodim topilmadi.')
-    Object.assign(user, { name, monthlySalary })
+    Object.assign(user, { name, monthlySalary, restDay, startDate })
     return safeUser(user)
   })
   response.json({ employee })
@@ -752,19 +961,38 @@ app.delete('/api/employees/:id', requireAuth, requireCompanyOwner, requirePaidSu
   })
 })
 
-app.put('/api/employees/:id/attendance', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+app.put('/api/employees/:id/attendance', requireAuth, requireOwnerOrManager, requirePaidSubscription, async (request, response) => {
   const date = validateDate(request.body?.date)
+  if (date > currentTashkentDate()) fail(400, 'Kelajak sanasiga davomat kiritib bo‘lmaydi.')
   const status = request.body?.status
-  if (!['present', 'absent'].includes(status)) fail(400, 'Davomat holati kelgan yoki kelmagan bo‘lishi kerak.')
+  if (!['present', 'absent', 'excused'].includes(status)) fail(400, 'Davomat holati kelgan, kelmagan yoki sababli bo‘lishi kerak.')
+  const reason = status === 'excused' && typeof request.body?.reason === 'string'
+    ? request.body.reason.trim()
+    : ''
+  if (status === 'excused' && (reason.length < 3 || reason.length > 300)) {
+    fail(400, 'Sababli kelmaganlik uchun sababni 3–300 ta belgi bilan yozing.')
+  }
   const attendance = await updateDatabase((database) => {
     const company = requireCompany(request, database)
     const employee = companyRecords(database, company.id, 'users')
       .find((user) => user.id === request.params.id && user.role === 'employee' && user.active)
     if (!employee) fail(404, 'Faol hodim topilmadi.')
+    const startDate = employee.startDate || employee.createdAt?.slice(0, 10)
+    if (startDate && date < startDate) fail(400, 'Ish boshlash sanasidan oldingi davomatni belgilab bo‘lmaydi.')
+    const restDay = Number.isInteger(employee.restDay) ? employee.restDay : null
+    if (
+      status !== 'present' &&
+      restDay !== null &&
+      new Date(`${date}T00:00:00.000Z`).getUTCDay() === restDay
+    ) {
+      fail(400, 'Bu xodimning haftalik dam olish kuni; davomat va jarima qayd etilmaydi.')
+    }
     const existing = companyRecords(database, company.id, 'attendance')
       .find((item) => item.employeeId === employee.id && item.date === date)
     if (existing) {
       existing.status = status
+      existing.reason = reason
+      existing.restDay = restDay
       existing.updatedAt = new Date().toISOString()
       existing.updatedBy = request.user.id
       return existing
@@ -776,6 +1004,8 @@ app.put('/api/employees/:id/attendance', requireAuth, requireCompanyOwner, requi
       employeeName: employee.name,
       date,
       status,
+      reason,
+      restDay,
       createdAt: new Date().toISOString(),
       updatedBy: request.user.id,
     }
@@ -785,7 +1015,7 @@ app.put('/api/employees/:id/attendance', requireAuth, requireCompanyOwner, requi
   response.json({ attendance })
 })
 
-app.post('/api/employees/:id/movements', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+app.post('/api/employees/:id/movements', requireAuth, requireOwnerOrManager, requirePaidSubscription, async (request, response) => {
   const kind = request.body?.kind
   if (!['advance', 'abed'].includes(kind)) fail(400, 'To‘lov turi avans yoki Abed bo‘lishi kerak.')
   const amount = positiveAmount(request.body?.amount)
@@ -813,6 +1043,63 @@ app.post('/api/employees/:id/movements', requireAuth, requireCompanyOwner, requi
     return created
   })
   response.status(201).json({ movement: entry })
+})
+
+app.get('/api/managers', requireAuth, requireOwnerOrManager, requirePaidSubscription, (request, response) => {
+  const database = readDatabase()
+  const company = requireCompany(request, database)
+  const managers = companyRecords(database, company.id, 'users').filter((user) => user.role === 'manager' && user.active).map(safeUser)
+  response.json({ managers })
+})
+
+app.post('/api/managers', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+  const name = validateName(request.body?.name, 'Menejer ismi')
+  const login = validateLogin(request.body?.login)
+  validatePassword(request.body?.password)
+  const monthlySalary = positiveAmount(request.body?.monthlySalary ?? 0, 'Menejer oylik maoshi')
+  const passwordHash = await bcrypt.hash(request.body.password, 12)
+  const manager = await updateDatabase((database) => {
+    const company = requireCompany(request, database)
+    ensureUniqueLogin(database, login)
+    const created = {
+      id: randomUUID(),
+      name,
+      login,
+      passwordHash,
+      role: 'manager',
+      companyId: company.id,
+      monthlySalary,
+      active: true,
+      createdAt: new Date().toISOString(),
+    }
+    database.users.push(created)
+    return safeUser(created)
+  })
+  response.status(201).json({ manager })
+})
+
+app.patch('/api/managers/:id', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+  const name = validateName(request.body?.name, 'Menejer ismi')
+  const monthlySalary = positiveAmount(request.body?.monthlySalary ?? 0, 'Menejer oylik maoshi')
+  const manager = await updateDatabase((database) => {
+    const company = requireCompany(request, database)
+    const user = companyRecords(database, company.id, 'users').find((item) => item.id === request.params.id && item.role === 'manager')
+    if (!user) fail(404, 'Menejer topilmadi.')
+    Object.assign(user, { name, monthlySalary })
+    return safeUser(user)
+  })
+  response.json({ manager })
+})
+
+app.delete('/api/managers/:id', requireAuth, requireCompanyOwner, requirePaidSubscription, async (request, response) => {
+  const removed = await updateDatabase((database) => {
+    const company = requireCompany(request, database)
+    const manager = companyRecords(database, company.id, 'users').find((user) => user.id === request.params.id && user.role === 'manager')
+    if (!manager) fail(404, 'Menejer topilmadi.')
+    database.users = database.users.filter((user) => user.id !== manager.id)
+    return { id: manager.id, name: manager.name }
+  })
+  response.json({ manager: removed, message: 'Menejer akkaunti o‘chirildi.' })
 })
 
 app.get('/api/receipts/:number', requireAuth, requireCompanyUser, requirePaidSubscription, (request, response) => {

@@ -1,8 +1,17 @@
-export const money = (value) => `${new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 }).format(Number(value) || 0)} so‘m`
+const currentLocale = () => {
+  const language = typeof document === 'undefined' ? 'uz' : document.documentElement.lang
+  return language === 'ru' ? 'ru-RU' : language === 'en' ? 'en-US' : 'uz-UZ'
+}
+
+export const money = (value) => {
+  const locale = currentLocale()
+  const suffix = locale === 'ru-RU' ? ' сум' : locale === 'en-US' ? ' UZS' : ' so‘m'
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Number(value) || 0)}${suffix}`
+}
 
 export const numberInput = (value) => {
   const amount = Number(value)
-  return Number.isFinite(amount) ? new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 }).format(amount) : ''
+  return Number.isFinite(amount) ? new Intl.NumberFormat(currentLocale(), { maximumFractionDigits: 0 }).format(amount) : ''
 }
 
 export const readNumber = (value) => {
