@@ -8987,7 +8987,11 @@ html[data-theme="dark"] .mobile-tabbar {
   }
 }
 
-button:not(.landing-drawer-backdrop):not(.mobile-menu-backdrop),
-.button {
-  border: 1px solid rgb(112 123 116 / 46%) !important;
+.app-shell button:not(.landing-drawer-backdrop):not(.mobile-menu-backdrop),
+.app-shell .button {
+  border: none !important;
+}
+
+.password-visibility {
+  border: none !important;
 }
